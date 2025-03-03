@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 // Supabase client instance for easy access throughout the app
 final supabase = Supabase.instance.client;
+
+class Constants {
+  static String supabaseUrl = dotenv.env['SUPABASE_URL'] ?? '';
+  static String supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'] ?? '';
+}
 
 // App colors
 class AppColors {

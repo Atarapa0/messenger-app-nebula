@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+// ignore: depend_on_referenced_packages, implementation_imports
+import 'package:gotrue/src/gotrue_response.dart';
 import '../utils/constants.dart';
 
 class RegisterForm extends StatefulWidget {
@@ -39,7 +42,7 @@ class _RegisterFormState extends State<RegisterForm> {
 
     try {
       // Register user with Supabase Auth
-      final response = await supabase.auth.signUp(
+      final GotrueSessionResponse response = await supabase.auth.signUp(
         _emailController.text.trim(),
         _passwordController.text,
         userMetadata: {
@@ -47,20 +50,25 @@ class _RegisterFormState extends State<RegisterForm> {
         },
       );
 
-      final error = response.error;
-      if (error != null) {
-        throw error.message;
+      if (response.error != null) {
+        throw response.error!.message;
       }
 
       final user = response.user;
       // Create user profile in database
       if (user != null) {
-        supabase.from('users').insert({
+        await supabase.from('users').insert({
           'id': user.id,
           'username': _usernameController.text.trim(),
           'email': _emailController.text.trim(),
           'created_at': DateTime.now().toIso8601String(),
           'updated_at': DateTime.now().toIso8601String(),
+        }).execute();
+
+        // Show success message
+        setState(() {
+          _errorMessage =
+              'Kayıt başarılı! Lütfen e-posta adresinizi doğrulayın.';
         });
       } else {
         throw 'Kullanıcı oluşturulamadı';

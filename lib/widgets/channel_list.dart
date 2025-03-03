@@ -7,12 +7,13 @@ class ChannelList extends StatefulWidget {
   const ChannelList({super.key});
 
   @override
-  _ChannelListState createState() => _ChannelListState();
+  State<ChannelList> createState() => _ChannelListState();
 }
 
 class _ChannelListState extends State<ChannelList> {
-  List<Channel> _channels = [];
+  final List<Channel> _channels = [];
   bool _isLoading = true;
+  final _channelNameController = TextEditingController();
 
   @override
   void initState() {
@@ -20,101 +21,144 @@ class _ChannelListState extends State<ChannelList> {
     _loadChannels();
   }
 
+  @override
+  void dispose() {
+    _channelNameController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadChannels() async {
-    setState(() {
-      _isLoading = true;
-    });
-
     try {
-      // Get current user's ID
-      final userId = supabase.auth.currentUser?.id;
-      if (userId == null) return;
+      final response = await supabase.from('channels').select().execute();
 
-      // Get channels where the user is a member
-      final response = await supabase
-          .from('channel_members')
-          .select('channel_id')
-          .eq('user_id', userId);
+      if (response.error != null) {
+        throw response.error!.message;
+      }
 
-      // Supabase'in yeni sürümünde response bir List<dynamic>
-      final responseList = response as List<dynamic>;
-
-      if (responseList.isEmpty) {
+      final data = response.data as List;
+      if (mounted) {
         setState(() {
-          _channels = [];
+          _channels.clear();
+          _channels.addAll(data.map((channel) => Channel.fromJson(channel)));
           _isLoading = false;
         });
-        return;
       }
-
-      // Get channel IDs
-      final channelIds = responseList
-          .map<String>((item) => item['channel_id'] as String)
-          .toList();
-
-      // Get channel details
-      final channelsResponse = await supabase
-          .from('channels')
-          .select('*, users:created_by(username)')
-          .filter('id', 'in', channelIds);
-
-      // Convert to Channel objects
-      final List<Channel> channels = [];
-      for (final data in channelsResponse as List<dynamic>) {
-        channels.add(Channel.fromJson(data));
-      }
-
-      setState(() {
-        _channels = channels;
-        _isLoading = false;
-      });
     } catch (e) {
-      print('Error loading channels: $e');
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Kanallar yüklenirken hata oluştu: $e')),
+        );
+      }
     }
+  }
+
+  Future<void> _createChannel(String name) async {
+    if (name.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Kanal adı boş olamaz')),
+      );
+      return;
+    }
+
+    try {
+      final response = await supabase.from('channels').insert({
+        'name': name.trim(),
+        'created_by': supabase.auth.currentUser!.id,
+      }).execute();
+
+      if (response.error != null) {
+        throw response.error!.message;
+      }
+
+      await _loadChannels();
+      _channelNameController.clear();
+      if (mounted) {
+        Navigator.pop(context); // Dialog'u kapat
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Kanal oluşturulurken hata oluştu: $e')),
+        );
+      }
+    }
+  }
+
+  void _showCreateChannelDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Yeni Kanal Oluştur'),
+        content: TextField(
+          controller: _channelNameController,
+          decoration: const InputDecoration(
+            labelText: 'Kanal Adı',
+            hintText: 'Örn: Genel Sohbet',
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('İptal'),
+          ),
+          ElevatedButton(
+            onPressed: () => _createChannel(_channelNameController.text),
+            child: const Text('Oluştur'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return _isLoading
-        ? Center(child: CircularProgressIndicator())
-        : _channels.isEmpty
-            ? Center(
-                child: Text(
-                  'Henüz kanal yok',
-                  style: AppTextStyles.body.copyWith(color: Colors.grey),
-                ),
-              )
-            : ListView.builder(
-                itemCount: _channels.length,
-                itemBuilder: (context, index) {
-                  final channel = _channels[index];
-                  return ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: AppColors.primary,
-                      child: Text(
-                        channel.name.substring(0, 1).toUpperCase(),
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    ),
-                    title: Text(channel.name),
-                    subtitle: Text(
-                      channel.description ?? 'Açıklama yok',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ChatScreen(channel: channel),
+    return Scaffold(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _channels.isEmpty
+              ? Center(
+                  child: Text(
+                    'Henüz kanal yok',
+                    style: AppTextStyles.body.copyWith(color: Colors.grey),
+                  ),
+                )
+              : ListView.builder(
+                  itemCount: _channels.length,
+                  itemBuilder: (context, index) {
+                    final channel = _channels[index];
+                    return ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: AppColors.primary,
+                        child: Text(
+                          channel.name.substring(0, 1).toUpperCase(),
+                          style: const TextStyle(color: Colors.white),
                         ),
-                      );
-                    },
-                  );
-                },
-              );
+                      ),
+                      title: Text(channel.name),
+                      subtitle: Text(
+                        channel.description ?? 'Açıklama yok',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ChatScreen(channel: channel),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showCreateChannelDialog,
+        child: const Icon(Icons.add),
+      ),
+    );
   }
 }

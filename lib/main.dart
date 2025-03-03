@@ -1,20 +1,26 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 // ignore: depend_on_referenced_packages, implementation_imports
 import 'package:gotrue/src/subscription.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screens/auth_screen.dart';
 import 'screens/home_screen.dart';
+import 'utils/constants.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Load environment variables
+  await dotenv.load(fileName: ".env");
+
+  // Initialize Supabase
   await Supabase.initialize(
-    url:
-        'https://bmaoxcraznlbestcszps.supabase.co', // Supabase URL'nizi buraya yazın
-    anonKey:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJtYW94Y3Jhem5sYmVzdGNzenBzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA5MzM1ODEsImV4cCI6MjA1NjUwOTU4MX0.v6Lfx5slZ3BWkA9EpDFzpXTk5HNnfCfYMN54Z5VUMWU', // Supabase Anonim Anahtarınızı buraya yazın
+    url: Constants.supabaseUrl,
+    anonKey: Constants.supabaseAnonKey,
   );
-  runApp(MyApp());
+
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {

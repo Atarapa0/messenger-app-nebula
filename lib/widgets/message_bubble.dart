@@ -8,10 +8,10 @@ class MessageBubble extends StatelessWidget {
   final bool isMe;
 
   const MessageBubble({
-    Key? key,
+    super.key,
     required this.message,
     required this.isMe,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -69,7 +69,8 @@ class MessageBubble extends StatelessWidget {
                     borderRadius: BorderRadius.circular(18),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
+                        color:
+                            Colors.black.withAlpha(13), // 0.05 opacity = 13/255
                         blurRadius: 2,
                         offset: Offset(0, 1),
                       ),
@@ -107,12 +108,12 @@ class MessageBubble extends StatelessWidget {
               if (isMe)
                 CircleAvatar(
                   radius: 16,
-                  backgroundImage:
-                      supabase.auth.currentUser?.userMetadata['avatar_url'] !=
-                              null
-                          ? NetworkImage(supabase
-                              .auth.currentUser!.userMetadata['avatar_url'])
-                          : null,
+                  backgroundImage: supabase
+                              .auth.currentUser?.userMetadata['avatar_url'] !=
+                          null
+                      ? NetworkImage(
+                          supabase.auth.currentUser!.userMetadata['avatar_url'])
+                      : null,
                   child:
                       supabase.auth.currentUser?.userMetadata['avatar_url'] ==
                               null
@@ -142,7 +143,7 @@ class MessageBubble extends StatelessWidget {
         return Icon(Icons.done_all, size: 12, color: Colors.blue[300]);
       case MessageStatus.failed:
         return Icon(Icons.error_outline, size: 12, color: Colors.red[300]);
-      }
+    }
   }
 }
 

@@ -7,12 +7,12 @@ class MessageInput extends StatefulWidget {
   final String channelId;
 
   const MessageInput({
-    Key? key,
+    super.key,
     required this.channelId,
-  }) : super(key: key);
+  });
 
   @override
-  _MessageInputState createState() => _MessageInputState();
+  State<MessageInput> createState() => _MessageInputState();
 }
 
 class _MessageInputState extends State<MessageInput> {
@@ -64,22 +64,28 @@ class _MessageInputState extends State<MessageInput> {
       }
 
       // Mesajı veritabanına ekle
-      await supabase.from('messages').insert(messageData);
+      await supabase.from('messages').insert(messageData).execute();
 
       // Mesaj gönderildikten sonra input'u temizle
       _messageController.clear();
-      setState(() {
-        _selectedImage = null;
-        _showAttachmentOptions = false;
-      });
+      if (mounted) {
+        setState(() {
+          _selectedImage = null;
+          _showAttachmentOptions = false;
+        });
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Mesaj gönderilirken hata: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Mesaj gönderilirken hata: $e')),
+        );
+      }
     } finally {
-      setState(() {
-        _isSending = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isSending = false;
+        });
+      }
     }
   }
 
@@ -87,7 +93,7 @@ class _MessageInputState extends State<MessageInput> {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
 
-    if (pickedFile != null) {
+    if (pickedFile != null && mounted) {
       setState(() {
         _selectedImage = File(pickedFile.path);
         _showAttachmentOptions = false;

@@ -34,21 +34,19 @@ class _LoginFormState extends State<LoginForm> {
     });
 
     try {
-      // Eski API (signIn)
       final response = await supabase.auth.signIn(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
 
       // Hata kontrolü
-      final error = response.error;
-      if (error != null) {
-        throw error.message;
+      if (response.data == null) {
+        throw 'Giriş başarısız. Lütfen e-posta ve şifrenizi kontrol edin.';
       }
 
       // Kullanıcı kontrolü
       if (response.user == null) {
-        throw 'Kullanıcı bulunamadı';
+        throw 'Kullanıcı bulunamadı. Lütfen önce kayıt olun.';
       }
     } catch (e) {
       setState(() {
